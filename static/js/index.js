@@ -171,71 +171,112 @@ function createTabs(devices, date) {
         divTab.appendChild(divCar)
         tabCont.appendChild(divTab)
 
-        let x1 = []
-        let y1 = []
         $.ajax({
-            url: '/get_signals_v/'+devices[i]+'/'+date,
+            url: '/get_limits/'+devices[i],
             type: 'GET',
             success: function (response) {
-                let signals = JSON.parse(response);
-                for (let i = 0; i < signals.length; i++) {
-                    let date = new Date(signals[i]['time']);
-                    let new_date = date.getDate()+'.'+date.getMonth()+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
-                    x1.push(new_date)
-                    y1.push(signals[i]['value'])
-                }
-                drawChart('Напряжение', x1, y1, canvas[0].id)
+                let params = JSON.parse(response);
+                //alert(JSON.stringify(params))
+
+                let x1 = []
+                let y1 = []
+                $.ajax({
+                    url: '/get_signals_v/'+devices[i]+'/'+date,
+                    type: 'GET',
+                    success: function (response) {
+                        let signals = JSON.parse(response);
+                        for (let i = 0; i < signals.length; i++) {
+                            let date = new Date(signals[i]['time']);
+                            let new_date = date.getDate()+'.'+date.getMonth()+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
+                            x1.push(new_date)
+                            y1.push(signals[i]['value'])
+                        }
+                        drawChart('Напряжение', x1, y1, params[0]['min_v'], params[0]['max_v'], canvas[0].id)
+                    },
+                    error: function (error) {
+                        error = JSON.stringify(error);
+                        alert('Ошибка: ' + error)
+                    }
+                });
+                let x2 = []
+                let y2 = []
+                $.ajax({
+                    url: '/get_signals_t/'+devices[i]+'/'+date,
+                    type: 'GET',
+                    success: function (response) {
+                        let signals = JSON.parse(response);
+                        for (let i = 0; i < signals.length; i++) {
+                            let date = new Date(signals[i]['time']);
+                            let new_date = date.getDate()+'.'+date.getMonth()+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
+                            x2.push(new_date)
+                            y2.push(signals[i]['value'])
+                        }
+                        drawChart('Температура', x2, y2, params[0]['min_t'], params[0]['min_t'], canvas[1].id)
+                    },
+                    error: function (error) {
+                        error = JSON.stringify(error);
+                        alert('Ошибка: ' + error)
+                    }
+                });
             },
             error: function (error) {
                 error = JSON.stringify(error);
                 alert('Ошибка: ' + error)
             }
-        });
-        let x2 = []
-        let y2 = []
-        $.ajax({
-            url: '/get_signals_t/'+devices[i]+'/'+date,
-            type: 'GET',
-            success: function (response) {
-                let signals = JSON.parse(response);
-                for (let i = 0; i < signals.length; i++) {
-                    let date = new Date(signals[i]['time']);
-                    let new_date = date.getDate()+'.'+date.getMonth()+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
-                    x2.push(new_date)
-                    y2.push(signals[i]['value'])
-                }
-                drawChart('Температура', x2, y2, canvas[1].id)
-            },
-            error: function (error) {
-                error = JSON.stringify(error);
-                alert('Ошибка: ' + error)
-            }
-        });
+        })
     }
 }
 
-function drawChart(title, x, y, id) {
+function drawChart(title, x, y, min, max, chart_id) {
     let cur_color;
-    if ((id.substring(6) % 2) === 1) {
+    if ((chart_id.substring(6) % 2) === 1) {
         cur_color = '#4682B4'
     } else {
-        cur_color = '#A52A2A'
+        cur_color = '#FF7F50'
     }
-    let chx = document.getElementById(id).getContext("2d");
+    let y1 =[]
+    let y2 =[]
+    for(let i = 0; i < y.length; i++) {
+        y1.push(max)
+        y2.push(min)
+    }
+    let chx = document.getElementById(chart_id).getContext("2d");
     let data =
         {
             labels: x,
-            datasets: [{
-                label: title,
-                data: y,
-                lineTension: 0,
-                fill: false,
-                borderColor: cur_color,
-                borderWidth: 1,
-                pointBackgroundColor: cur_color,
-                pointRadius: 3,
-                pointHoverRadius: 5
-            }]
+            datasets: [
+                {
+                    label: title,
+                    data: y,
+                    lineTension: 0,
+                    fill: false,
+                    borderColor: cur_color,
+                    borderWidth: 1,
+                    pointBackgroundColor: cur_color,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: 'Max',
+                    data: y1,
+                    lineTension: 0,
+                    fill: false,
+                    borderColor: '#DC143C',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 0
+                },
+                {
+                    label: 'Min',
+                    data: y2,
+                    lineTension: 0,
+                    fill: false,
+                    borderColor: '#DC143C',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHoverRadius: 0
+                }
+            ]
         };
     let options =
         {

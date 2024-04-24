@@ -20,6 +20,10 @@ Devices = Table\
         Column('id', Integer, primary_key=True, autoincrement=True, nullable=False),
         Column('name', String(), nullable=False),
         Column('enabled', Boolean, nullable=False),
+        Column('min_v', Float, nullable=False),
+        Column('max_v', Float, nullable=False),
+        Column('min_t', Float, nullable=False),
+        Column('max_t', Float, nullable=False),
         Column('object_id', Integer, ForeignKey('object.id'), nullable=False),
         Column('module_id', Integer, ForeignKey('module.id')),
         Column('connector_num', Enum('1', '2', '3', '4', '5'))
@@ -48,6 +52,15 @@ def datetime_handler(x):
     if isinstance(x, datetime.datetime):
         return x.isoformat()
     raise TypeError("Unknown type")
+
+
+@app.route('/get_limits/<device_id>', methods=['GET'])
+def mmm11(device_id):
+    session = Session(bind=engine)
+    limits = session.query(Devices.c.min_v, Devices.c.max_v, Devices.c.min_t, Devices.c.max_t).where(Devices.c.id == device_id)
+    lim_json = [row._asdict() for row in limits]
+    session.close()
+    return json.dumps(lim_json)
 
 
 @app.route('/get_signals_v/<device_id>/<start_date>/<end_date>', methods=['GET'])

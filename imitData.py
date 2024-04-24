@@ -9,6 +9,13 @@ from sqlalchemy import create_engine, Table, Column, MetaData, Integer, String, 
 engine = create_engine("postgresql+psycopg2://postgres:kata2000@localhost/AKB")
 Base = MetaData()
 
+limit_min_v = 0
+limit_max_v = 15.5
+limit_min_t = -30
+limit_max_t = 110
+dist_v = 0.5
+dist_t = 2
+
 Objects = Table\
     ('object', Base,
        Column('id', Integer, primary_key=True, autoincrement=True, nullable=False),
@@ -19,6 +26,10 @@ Devices = Table\
         Column('id', Integer, primary_key=True, autoincrement=True, nullable=False),
         Column('name', String(), nullable=False),
         Column('enabled', Boolean, nullable=False),
+        Column('min_v', Float, nullable=False),
+        Column('max_v', Float, nullable=False),
+        Column('min_t', Float, nullable=False),
+        Column('max_t', Float, nullable=False),
         Column('object_id', Integer, ForeignKey('object.id'), nullable=False),
         Column('module_id', Integer, ForeignKey('module.id')),
         Column('connector_num', Enum('1', '2', '3', '4', '5'))
@@ -60,9 +71,26 @@ def start():
             V = ['null', 'null', 'null', 'null', 'null']
             T = ['null', 'null', 'null', 'null', 'null']
             for row1 in dev_json:
-                #row1['max_v']
-                V[int(row1['connector_num']) - 1] = round(random.uniform(9.8, 13.1), 2)
-                T[int(row1['connector_num']) - 1] = round(random.uniform(15, 33), 2)
+                session = Session(bind=engine)
+                signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Напряжение')
+                sig_json = [row._asdict() for row in signal_type_id]
+                signal_type = sig_json[0]['id']
+                values = session.query(Signals.c.value).\
+                    filter(and_(Signals.c.device_id == row1['id'], Signals.c.signal_type_id == signal_type)).order_by(Signals.c.time.desc())
+                session.close()
+                val_json = [row._asdict() for row in values]
+                if len(val_json) == 0:
+                    V[int(row1['connector_num']) - 1] = round(random.uniform(12.5, 14.5), 2)
+                else:
+                    last_v = val_json[0]['value']
+                    if (last_v-dist_v < limit_min_v):
+                        V[int(row1['connector_num']) - 1] = round(random.uniform(limit_min_v, last_v+dist_v), 2)
+                    elif (last_v+dist_v > limit_max_v):
+                        V[int(row1['connector_num']) - 1] = round(random.uniform(last_v-dist_v, limit_max_v), 2)
+                    else:
+                        V[int(row1['connector_num']) - 1] = round(random.uniform(last_v-dist_v, last_v+dist_v), 2)
+
+
             moduleData = {
                 'module_id': str(row['id']),
                 'time': cur_time,
@@ -108,16 +136,16 @@ def add_to_base(data):
 
                 devices = session.query(Devices).where(
                     and_(Devices.c.module_id == module_id, Devices.c.connector_num == key[1]))
-
+                session.close()
                 dev_json = [row._asdict() for row in devices]
                 device_id = dev_json[0]['id']
 
                 stmt = insert(Signals).values(time=time, value=value, signal_type_id=signal_type, device_id=device_id)
-                conn = session.connection()
+                #conn = session.connection()
                 with engine.begin() as conn:
                     conn.execute(stmt)
                 conn.close()
-                session.close()
+
 
 
 if __name__ == '__main__':
