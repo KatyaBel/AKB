@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, Enum, and_, Float, insert, ForeignKey
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, Table, Column, MetaData, Integer, String, DateTime
 
-engine = create_engine("postgresql+psycopg2://postgres:kata2000@localhost/AKB")
+engine = create_engine("postgresql+psycopg2://postgres:kata2000@localhost/AKB", pool_size=10, max_overflow=-1)
 Base = MetaData()
 
 limit_min_v = 0
@@ -82,13 +82,33 @@ def start():
                 if len(val_json) == 0:
                     V[int(row1['connector_num']) - 1] = round(random.uniform(12.5, 14.5), 2)
                 else:
-                    last_v = val_json[0]['value']
-                    if (last_v-dist_v < limit_min_v):
-                        V[int(row1['connector_num']) - 1] = round(random.uniform(limit_min_v, last_v+dist_v), 2)
-                    elif (last_v+dist_v > limit_max_v):
-                        V[int(row1['connector_num']) - 1] = round(random.uniform(last_v-dist_v, limit_max_v), 2)
+                    last = val_json[0]['value']
+                    if (last-dist_v < limit_min_v):
+                        V[int(row1['connector_num']) - 1] = round(random.uniform(limit_min_v, last+dist_v), 2)
+                    elif (last+dist_v > limit_max_v):
+                        V[int(row1['connector_num']) - 1] = round(random.uniform(last-dist_v, limit_max_v), 2)
                     else:
-                        V[int(row1['connector_num']) - 1] = round(random.uniform(last_v-dist_v, last_v+dist_v), 2)
+                        V[int(row1['connector_num']) - 1] = round(random.uniform(last-dist_v, last+dist_v), 2)
+
+                session = Session(bind=engine)
+                signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Температура')
+                sig_json = [row._asdict() for row in signal_type_id]
+                signal_type = sig_json[0]['id']
+                values = session.query(Signals.c.value). \
+                    filter(and_(Signals.c.device_id == row1['id'], Signals.c.signal_type_id == signal_type)).order_by(
+                    Signals.c.time.desc())
+                session.close()
+                val_json = [row._asdict() for row in values]
+                if len(val_json) == 0:
+                    T[int(row1['connector_num']) - 1] = round(random.uniform(15, 25), 2)
+                else:
+                    last = val_json[0]['value']
+                    if (last-dist_v < limit_min_t):
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(limit_min_t, last+dist_t), 2)
+                    elif (last+dist_t > limit_max_t):
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(last-dist_t, limit_max_t), 2)
+                    else:
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(last-dist_t, last+dist_t), 2)
 
 
             moduleData = {

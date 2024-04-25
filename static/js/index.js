@@ -211,7 +211,7 @@ function createTabs(devices, date) {
                             x2.push(new_date)
                             y2.push(signals[i]['value'])
                         }
-                        drawChart('Температура', x2, y2, params[0]['min_t'], params[0]['min_t'], canvas[1].id)
+                        drawChart('Температура', x2, y2, params[0]['min_t'], params[0]['max_t'], canvas[1].id)
                     },
                     error: function (error) {
                         error = JSON.stringify(error);
