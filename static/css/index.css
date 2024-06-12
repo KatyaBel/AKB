@@ -1,17 +1,6 @@
-#start_date, #end_date {
-    width: 50%;
+.container-fluid {
+    min-height: 100vh;
 }
-#start_time, #end_time {
-    width: 48%;
-}
-#ulTabs {
-    font-weight: 700;
-    font-size: 20px;
-}
-.carousel-inner {
-    width: 90%;
-    margin: auto;
-}
-.carousel button {
-    width: 30px;
+.buttons button {
+    margin-right: 20px;
 }

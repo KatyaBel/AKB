@@ -55,29 +55,24 @@ Signal_types = Table\
     )
 
 def start():
+    session = Session(bind=engine)
     date_now = datetime.datetime.now()
     cur_time = str(date_now.date())+' '+str(date_now.hour)+':'+str(date_now.minute)+':'+str(date_now.second)
-    session = Session(bind=engine)
     modules = session.query(Modules).order_by(Modules.c.id)
-    session.close()
     mod_json = [row._asdict() for row in modules]
     data = []
     for row in mod_json:
-        session = Session(bind=engine)
         devices = session.query(Devices).filter(and_(Devices.c.module_id == row['id'], Devices.c.enabled == True)).order_by(Devices.c.connector_num)
-        session.close()
         dev_json = [row._asdict() for row in devices]
         if len(dev_json) != 0:
             V = ['null', 'null', 'null', 'null', 'null']
             T = ['null', 'null', 'null', 'null', 'null']
             for row1 in dev_json:
-                session = Session(bind=engine)
                 signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Напряжение')
                 sig_json = [row._asdict() for row in signal_type_id]
                 signal_type = sig_json[0]['id']
                 values = session.query(Signals.c.value).\
                     filter(and_(Signals.c.device_id == row1['id'], Signals.c.signal_type_id == signal_type)).order_by(Signals.c.time.desc())
-                session.close()
                 val_json = [row._asdict() for row in values]
                 if len(val_json) == 0:
                     V[int(row1['connector_num']) - 1] = round(random.uniform(12.5, 14.5), 2)
@@ -90,14 +85,12 @@ def start():
                     else:
                         V[int(row1['connector_num']) - 1] = round(random.uniform(last-dist_v, last+dist_v), 2)
 
-                session = Session(bind=engine)
                 signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Температура')
                 sig_json = [row._asdict() for row in signal_type_id]
                 signal_type = sig_json[0]['id']
                 values = session.query(Signals.c.value). \
                     filter(and_(Signals.c.device_id == row1['id'], Signals.c.signal_type_id == signal_type)).order_by(
                     Signals.c.time.desc())
-                session.close()
                 val_json = [row._asdict() for row in values]
                 if len(val_json) == 0:
                     T[int(row1['connector_num']) - 1] = round(random.uniform(15, 25), 2)
@@ -130,6 +123,7 @@ def start():
                 ]
             }
             data.append(moduleData)
+    session.close()
     print('\nПоказания:')
     print(json.dumps(data, indent=4))
     add_to_base(data)
@@ -156,16 +150,13 @@ def add_to_base(data):
 
                 devices = session.query(Devices).where(
                     and_(Devices.c.module_id == module_id, Devices.c.connector_num == key[1]))
-                session.close()
                 dev_json = [row._asdict() for row in devices]
                 device_id = dev_json[0]['id']
+                session.close()
 
                 stmt = insert(Signals).values(time=time, value=value, signal_type_id=signal_type, device_id=device_id)
-                #conn = session.connection()
                 with engine.begin() as conn:
                     conn.execute(stmt)
-                conn.close()
-
 
 
 if __name__ == '__main__':
