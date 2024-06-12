@@ -7,7 +7,7 @@ from sqlalchemy import Boolean, Enum, and_, Float, ForeignKey
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, Table, Column, MetaData, Integer, String, DateTime
 from sympy import symbols
-#import predict
+import predict
 
 x = symbols('x')
 K = 5 #степень многочлена
@@ -171,41 +171,37 @@ def get_predict_v(device_id, start_date, period):
     yi = []
     for i in range(len(sig_json)):
         yi.append(sig_json[i]['value'])
+    func = predict.MNK(xi_calc, yi, K)
+    f = [func.subs(x, a) for a in xi_calc]
 
-
-    #func = predict.MNK(xi_calc, yi, K)
-    #f = [func.subs(x, a) for a in xi_calc]
-
-    #x_predict = []
-    #x_predict_calc = []
-    #start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
-    #x_predict.append(start_date)
-    #x_predict_calc.append((start_date - start_signal_date).total_seconds())
-    #period = time.strptime(period, '%H:%M:%S')
-    #period = datetime.timedelta(hours=period.tm_hour, minutes=period.tm_min, seconds=period.tm_sec).total_seconds()
-    #i = 1
-    #while period > 0:
-        #x_predict.append(x_predict[i-1] + datetime.timedelta(seconds=10))
-        #x_predict_calc.append(x_predict_calc[i-1]+10)
-        #period = period - 10
-        #i = i + 1
-    #y_predict = [func.subs(x, a) for a in x_predict_calc]
-    #for i in range(len(y_predict)):
-        #if y_predict[i] > 15.5:
-            #y_predict[i] = 15.5
-        #if y_predict[i] < 0:
-            #y_predict[i] = 0
-    #data = {
-        #'f_title': str(func),
-        #'x': xi,
-        #'y': str(yi),
-        #'f': str(f),
-        #'x_p': x_predict,
-        #'y_p': str(y_predict)
-    #}
-    #return json.dumps(data, default=datetime_handler)
-    data = {'gi': 'hi'}
-    return data
+    x_predict = []
+    x_predict_calc = []
+    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
+    x_predict.append(start_date)
+    x_predict_calc.append((start_date - start_signal_date).total_seconds())
+    period = time.strptime(period, '%H:%M:%S')
+    period = datetime.timedelta(hours=period.tm_hour, minutes=period.tm_min, seconds=period.tm_sec).total_seconds()
+    i = 1
+    while period > 0:
+        x_predict.append(x_predict[i-1] + datetime.timedelta(seconds=10))
+        x_predict_calc.append(x_predict_calc[i-1]+10)
+        period = period - 10
+        i = i + 1
+    y_predict = [func.subs(x, a) for a in x_predict_calc]
+    for i in range(len(y_predict)):
+        if y_predict[i] > 15.5:
+            y_predict[i] = 15.5
+        if y_predict[i] < 0:
+            y_predict[i] = 0
+    data = {
+        'f_title': str(func),
+        'x': xi,
+        'y': str(yi),
+        'f': str(f),
+        'x_p': x_predict,
+        'y_p': str(y_predict)
+    }
+    return json.dumps(data, default=datetime_handler)
 
 
 @app.route('/get_predict_t/<device_id>/<start_date>/<period>', methods=['GET'])
@@ -227,41 +223,37 @@ def get_predict_t(device_id, start_date, period):
     yi = []
     for i in range(len(sig_json)):
         yi.append(sig_json[i]['value'])
+    func = predict.MNK(xi_calc, yi, K)
+    f = [func.subs(x, a) for a in xi_calc]
 
-
-    #func = predict.MNK(xi_calc, yi, K)
-    #f = [func.subs(x, a) for a in xi_calc]
-
-    #x_predict = []
-    #x_predict_calc = []
-    #start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
-    #x_predict.append(start_date)
-    #x_predict_calc.append((start_date - start_signal_date).total_seconds())
-    #period = time.strptime(period, '%H:%M:%S')
-    #period = datetime.timedelta(hours=period.tm_hour, minutes=period.tm_min, seconds=period.tm_sec).total_seconds()
-    #i = 1
-    #while period > 0:
-        #x_predict.append(x_predict[i - 1] + datetime.timedelta(seconds=10))
-        #x_predict_calc.append(x_predict_calc[i - 1] + 10)
-        #period = period - 10
-        #i = i + 1
-    #y_predict = [func.subs(x, a) for a in x_predict_calc]
-    #for i in range(len(y_predict)):
-        #if y_predict[i] > 110:
-            #y_predict[i] = 110
-        #if y_predict[i] < -30:
-            #y_predict[i] = -30
-    #data = {
-        #'f_title': str(func),
-        #'x': xi,
-        #'y': str(yi),
-        #'f': str(f),
-        #'x_p': x_predict,
-        #'y_p': str(y_predict)
-    #}
-    #return json.dumps(data, default=datetime_handler)
-    data = {'gi': 'hi'}
-    return data
+    x_predict = []
+    x_predict_calc = []
+    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
+    x_predict.append(start_date)
+    x_predict_calc.append((start_date - start_signal_date).total_seconds())
+    period = time.strptime(period, '%H:%M:%S')
+    period = datetime.timedelta(hours=period.tm_hour, minutes=period.tm_min, seconds=period.tm_sec).total_seconds()
+    i = 1
+    while period > 0:
+        x_predict.append(x_predict[i - 1] + datetime.timedelta(seconds=10))
+        x_predict_calc.append(x_predict_calc[i - 1] + 10)
+        period = period - 10
+        i = i + 1
+    y_predict = [func.subs(x, a) for a in x_predict_calc]
+    for i in range(len(y_predict)):
+        if y_predict[i] > 110:
+            y_predict[i] = 110
+        if y_predict[i] < -30:
+            y_predict[i] = -30
+    data = {
+        'f_title': str(func),
+        'x': xi,
+        'y': str(yi),
+        'f': str(f),
+        'x_p': x_predict,
+        'y_p': str(y_predict)
+    }
+    return json.dumps(data, default=datetime_handler)
 
 
 if __name__ == '__main__':
