@@ -86,7 +86,7 @@ function getDevices(num) {
 function predict(num, start_date, period) {
     document.getElementById('nameDev').innerText = $('#selectDevs option:selected').html();
     $.ajax({
-        url: '/get_predict_v/'+num+'/'+start_date+'/'+period,
+        url: '/get_predict_v/'+num+'/'+'/'+period,
         type: 'GET',
         success: function (response) {
             let data = JSON.parse(response);
@@ -94,7 +94,7 @@ function predict(num, start_date, period) {
                 url: '/get_limits/'+num,
                 type: 'GET',
                 success: function (response) {
-                    let params = JSON.parse(response);
+                    /*let params = JSON.parse(response);
                     let title = data['f_title']
 
                     let r = /[\d|.]+/g;
@@ -110,7 +110,7 @@ function predict(num, start_date, period) {
                     }
                     while (title.indexOf('**') >= 0) {
                         title = title.replace('**', '^')
-                    }
+                    }*/
                     let x_str = data['x']
                     let x = []
                     for (let i = 0; i < x_str.length; i++) {
@@ -120,7 +120,15 @@ function predict(num, start_date, period) {
                     }
                     let y = JSON.parse(data['y'])
                     let f = JSON.parse(data['f'])
-                    drawChart(title, x, y, f, params[0]['min_v'], params[0]['max_v'], 'canvas1')
+
+                    if (num === '1') {
+                        drawChart('График', x, y, f, 11.0, 14.5, 'canvas1')
+                    } else {
+                        //drawChart(title, x, y, f, params[0]['min_v'], params[0]['max_v'], 'canvas1')
+                    }
+
+
+
                     let x_p_str = data['x_p']
                     let x_p = []
                     for (let i = 0; i < x_p_str.length; i++) {
@@ -129,7 +137,7 @@ function predict(num, start_date, period) {
                         x_p.push(new_date)
                     }
                     let y_p = JSON.parse(data['y_p'])
-                    drawPredict(x_p, y_p, params[0]['min_v'], params[0]['max_v'], 'calcCanvas1')
+                    drawPredict(x_p, y_p, 11, 14.5, 'calcCanvas1')
                 },
                 error: function (error) {
                     error = JSON.stringify(error);
@@ -142,6 +150,8 @@ function predict(num, start_date, period) {
             alert('Ошибка: ' + error)
         }
     });
+
+    /*
     $.ajax({
         url: '/get_predict_t/'+num+'/'+start_date+'/'+period,
         type: 'GET',
@@ -184,6 +194,7 @@ function predict(num, start_date, period) {
             alert('Ошибка: ' + error)
         }
     });
+    */
 }
 
 function drawChart(func, x, y, f, max, min, chart_id) {
@@ -284,9 +295,9 @@ function drawPredict(x, y, max, min, chart_id) {
                     data: y,
                     lineTension: 0,
                     fill: false,
-                    borderColor: '#CD5C5C',
+                    borderColor: 'orange',
                     borderWidth: 1,
-                    pointBackgroundColor: '#CD5C5C',
+                    pointBackgroundColor: 'orange',
                     pointRadius: 0,
                     pointHoverRadius: 0
                 },

@@ -189,7 +189,14 @@ function createTabs(devices, date) {
                             x1.push(new_date)
                             y1.push(signals[i]['value'])
                         }
-                        drawChart('Напряжение', x1, y1, params[0]['min_v'], params[0]['max_v'], canvas[0].id)
+
+                        if (devices[i] === '1') {
+                            drawChart('Напряжение', x1, y1, 11, 14.5, canvas[0].id)
+                        } else {
+                            drawChart('Напряжение', x1, y1, params[0]['min_v'], params[0]['max_v'], canvas[0].id)
+                        }
+
+
                     },
                     error: function (error) {
                         error = JSON.stringify(error);
