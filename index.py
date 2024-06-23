@@ -1,16 +1,21 @@
+import ast
 import datetime
 import json
-import time
+import math
+import random
 
+import matplotlib.pyplot as plt
+
+import numpy as np
 from flask import Flask, render_template, request
 from sqlalchemy import Boolean, Enum, and_, Float, ForeignKey
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, Table, Column, MetaData, Integer, String, DateTime
 from sympy import symbols
 import predict
+from imitData import interval
 
 x = symbols('x')
-K = 5 #степень многочлена
 
 app = Flask(__name__)
 
@@ -156,6 +161,15 @@ def get_last_signal(device_id):
 @app.route('/get_predict_v/<device_id>/<period>', methods=['GET'])
 def get_predict_v(device_id, period):
     session = Session(bind=engine)
+    limits = session.query(Devices.c.min_v, Devices.c.max_v, Devices.c.min_t, Devices.c.max_t).where(
+        Devices.c.id == device_id)
+    session.close()
+    lim_json = [row._asdict() for row in limits]
+    min_v = -1
+    max_v = -1
+    for row in lim_json:
+        min_v = row['min_v']
+        max_v = row['max_v']
     signal_type_id = session.query(Signal_types).where(Signal_types.c.title == 'Напряжение')
     sig_json = [row._asdict() for row in signal_type_id]
     signal_type = sig_json[0]['id']
@@ -167,23 +181,23 @@ def get_predict_v(device_id, period):
     xi = []
     xi_calc = []
     for i in range(len(sig_json)):
-        xi_calc.append((sig_json[i]['time'] - start_signal_date).total_seconds())
+        xi_calc.append((sig_json[i]['time'] - start_signal_date).total_seconds()/60)
         xi.append(sig_json[i]['time'])
     yi = []
     for i in range(len(sig_json)):
         yi.append(sig_json[i]['value'])
     charge_koef = []
     discharge_koef = []
+    start = [0]
     i = 0
-    last = -1
     time1 = 0
     time2 = 0
     while i < len(xi_calc)-1:
         charge_loop_x = []
         charge_loop_y = []
         index = -1
-        while yi[i] <= 14.5:
-            if i >= len(xi)-1:
+        while yi[i] <= max_v:
+            if i >= len(xi_calc)-1:
                 index = -1
                 break
             charge_loop_x.append(xi_calc[i])
@@ -196,8 +210,8 @@ def get_predict_v(device_id, period):
             middle_loop_x = []
             middle_loop_y = []
             index = -1
-            while yi[i] > 14.5:
-                if i >= len(xi)-1:
+            while yi[i] > max_v:
+                if i >= len(xi_calc)-1:
                     index = -1
                     break
                 middle_loop_x.append(xi_calc[i])
@@ -217,6 +231,7 @@ def get_predict_v(device_id, period):
                         else:
                             discharge_loop_x.append(middle_loop_x[j])
                             discharge_loop_y.append(middle_loop_y[j])
+                    start.append(i-len(middle_loop_x)//2-2)
                 else:
                     for j in range(len(middle_loop_x)):
                         if j <= len(middle_loop_x)//2:
@@ -225,13 +240,14 @@ def get_predict_v(device_id, period):
                         else:
                             discharge_loop_x.append(middle_loop_x[j])
                             discharge_loop_y.append(middle_loop_y[j])
+                    start.append(i-len(middle_loop_x)//2-1)
                 charge_loop_x_calc = []
                 for j in range(len(charge_loop_x)):
                     charge_loop_x_calc.append(charge_loop_x[j]-charge_loop_x[0])
                 time1 += len(charge_loop_x_calc)
                 charge_koef.append(predict.MNK(charge_loop_x_calc, charge_loop_y, 3))
-                while yi[i] >= 11:
-                    if i >= len(xi)-1:
+                while yi[i] >= min_v:
+                    if i >= len(xi_calc)-1:
                         index = -1
                         break
                     discharge_loop_x.append(xi_calc[i])
@@ -243,8 +259,8 @@ def get_predict_v(device_id, period):
                 else:
                     middle_loop_x = []
                     middle_loop_y = []
-                    while yi[i] < 11:
-                        if i >= len(xi):
+                    while yi[i] < min_v:
+                        if i >= len(xi_calc):
                             index = -1
                             break
                         middle_loop_x.append(xi_calc[i])
@@ -254,83 +270,85 @@ def get_predict_v(device_id, period):
                         break
                     else:
                         if len(middle_loop_x) % 2 == 0:
-                            for j in range(len(middle_loop_x) // 2):
+                            for j in range(len(middle_loop_x)//2):
                                 discharge_loop_x.append(middle_loop_x[j])
                                 discharge_loop_y.append(middle_loop_y[j])
                         else:
-                            for j in range(len(middle_loop_x) // 2):
+                            for j in range(len(middle_loop_x)//2):
                                 discharge_loop_x.append(middle_loop_x[j])
                                 discharge_loop_y.append(middle_loop_y[j])
                         discharge_loop_x_calc = []
                         for j in range(len(discharge_loop_x)):
-                            discharge_loop_x_calc.append(discharge_loop_x[j] - discharge_loop_x[0])
+                            discharge_loop_x_calc.append(discharge_loop_x[j]-discharge_loop_x[0])
                         time2 += len(discharge_loop_x_calc)
                         discharge_koef.append(predict.MNK(discharge_loop_x_calc, discharge_loop_y, 3))
-                        i -= len(middle_loop_x) // 2
-                        last = i
-    charge_k1 = 0
-    charge_k2 = 0
-    charge_k3 = 0
-    charge_k4 = 0
+                        i -= len(middle_loop_x)//2
+                        start.append(i)
+    charge_k = [0, 0, 0, 0]
     for i in range(len(charge_koef)):
-        charge_k1 += charge_koef[i][0]
-        charge_k2 += charge_koef[i][1]
-        charge_k3 += charge_koef[i][2]
-        charge_k4 += charge_koef[i][3]
-    charge_k1 /= len(charge_koef)
-    charge_k2 /= len(charge_koef)
-    charge_k3 /= len(charge_koef)
-    charge_k4 /= len(charge_koef)
-    discharge_k1 = 0
-    discharge_k2 = 0
-    discharge_k3 = 0
-    discharge_k4 = 0
+        for j in range(len(charge_k)):
+            charge_k[j] += charge_koef[i][j]
+    for i in range(len(charge_k)):
+        charge_k[i] /= len(charge_koef)
+    discharge_k = [0, 0, 0, 0]
     for i in range(len(discharge_koef)):
-        discharge_k1 += discharge_koef[i][0]
-        discharge_k2 += discharge_koef[i][1]
-        discharge_k3 += discharge_koef[i][2]
-        discharge_k4 += discharge_koef[i][3]
-    discharge_k1 /= len(discharge_koef)
-    discharge_k2 /= len(discharge_koef)
-    discharge_k3 /= len(discharge_koef)
-    discharge_k4 /= len(discharge_koef)
+        for j in range(len(discharge_k)):
+            discharge_k[j] += discharge_koef[i][j]
+    for i in range(len(discharge_k)):
+        discharge_k[i] /= len(discharge_koef)
     time1 /= len(charge_koef)
     time2 /= len(discharge_koef)
-    charge_f = charge_k1*x**3+charge_k2*x**2+charge_k3*x+charge_k4
-    discharge_f = discharge_k1*x**3+discharge_k2*x**2+discharge_k3*x+discharge_k4
+    charge_f = charge_k[0]*x**3+charge_k[1]*x**2+charge_k[2]*x+charge_k[3]
+    discharge_f = discharge_k[0]*x**3+discharge_k[1]*x**2+discharge_k[2]*x+discharge_k[3]
+    charge_koef = charge_koef[len(charge_koef)-3:]
+    discharge_koef = discharge_koef[len(discharge_koef)-3:]
+    start = start[len(start)-7:]
+    xi = xi[start[0]+1:]
+    yi = yi[start[0]+1:]
+    for i in range(1, len(start)):
+        start[i] = start[i]-start[0]
+    start[0] = 0
+    k = 0
     f = []
-    while i <= len(xi_calc):
-        for j in range(0, int(time1)-1):
-            f.append(charge_f.subs(x, xi_calc[j]))
-            i += 1
-        for j in range(0, int(time2)-1):
-            f.append(discharge_f.subs(x, xi_calc[j]))
-            i += 1
-    period = time.strptime(period, '%H:%M:%S')
-    period = datetime.timedelta(hours=period.tm_hour, minutes=period.tm_min, seconds=period.tm_sec).total_seconds()
+    for i in range(1, len(start)-1, 2):
+        for j in range(start[i-1], start[i]):
+            j -= start[i-1]
+            f.append(charge_koef[k][0]*math.pow(xi_calc[j], 3)+charge_koef[k][1]*math.pow(xi_calc[j], 2)+charge_koef[k][2]*xi_calc[j]+charge_koef[k][3])
+        for j in range(start[i], start[i+1]):
+            j -= start[i]
+            f.append(discharge_koef[k][0]*math.pow(xi_calc[j], 3)+discharge_koef[k][1]*math.pow(xi_calc[j], 2)+discharge_koef[k][2]*xi_calc[j]+discharge_koef[k][3])
+        k += 1
+    for i in range(start[len(start)-1], len(xi)-1):
+        f.append(charge_f.subs(x, xi_calc[i]-xi_calc[start[len(start)-1]]))
+    period_date = period.split(':')
+    period = int(period_date[0])*1440+int(period_date[1])*60+int(period_date[2])
     x_predict = []
-    x_predict_calc = []
-    for i in range(last, len(sig_json)):
-        x_predict.append(xi[i])
-        x_predict_calc.append(xi_calc[i])
-    i = len(x_predict)
+    x_predict.append(sig_json[len(sig_json)-1]['time'])
+    x_predict_calc = [0]
+    i = 1
     while period > 0:
-        x_predict.append(x_predict[i-1] + datetime.timedelta(seconds=10))
-        x_predict_calc.append(x_predict_calc[i-1]+10)
-        period = period - 10
-        i = i + 1
+        x_predict.append(x_predict[i-1]+datetime.timedelta(minutes=interval))
+        x_predict_calc.append(x_predict_calc[i-1]+interval)
+        period = period - interval
+        i += 1
+    time1 = round(time1)
+    time2 = round(time2)
     y_predict = []
     i = 0
-    while i <= len(x_predict_calc):
-        for j in range(0, int(time1) - 1):
-            y_predict.append(charge_f.subs(x, x_predict_calc[j]-x_predict_calc[0]))
+    for j in range(len(xi)-start[len(start)-1], time1):
+        y_predict.append(charge_f.subs(x, x_predict_calc[j]))
+        i += 1
+    while i < len(x_predict_calc):
+        for j in range(0, time2):
+            if i >= len(x_predict_calc):
+                break
+            y_predict.append(discharge_f.subs(x, x_predict_calc[j]))
             i += 1
-        for j in range(0, int(time2) - 1):
-            y_predict.append(discharge_f.subs(x, x_predict_calc[j]-x_predict_calc[0]))
+        for j in range(0, time1):
+            if i >= len(x_predict_calc):
+                break
+            y_predict.append(charge_f.subs(x, x_predict_calc[j]))
             i += 1
-    x_predict[:len(sig_json)-last] = []
-    x_predict_calc[:len(sig_json)-last] = []
-    y_predict[:len(sig_json)-last] = []
     data = {
         'f1_title': str(charge_f),
         'f2_title': str(discharge_f),
@@ -343,8 +361,9 @@ def get_predict_v(device_id, period):
     return json.dumps(data, default=datetime_handler)
 
 
-@app.route('/get_predict_t/<device_id>/<start_date>/<period>', methods=['GET'])
-def get_predict_t(device_id, start_date, period):
+@app.route('/get_predict_t/<device_id>/<x_predict_v>/<y_predict_v>', methods=['GET'])
+def get_predict_t(device_id, x_predict_v, y_predict_v):
+    y_predict_v = ast.literal_eval(y_predict_v)
     session = Session(bind=engine)
     signal_type_id = session.query(Signal_types).where(Signal_types.c.title == 'Температура')
     sig_json = [row._asdict() for row in signal_type_id]
@@ -353,43 +372,22 @@ def get_predict_t(device_id, start_date, period):
         where(and_(Signals.c.signal_type_id == signal_type, Signals.c.device_id == device_id)).order_by(Signals.c.time)
     session.close()
     sig_json = [row._asdict() for row in signals]
-    start_signal_date = sig_json[0]['time']
     xi = []
-    xi_calc = []
     for i in range(len(sig_json)):
-        xi_calc.append((sig_json[i]['time'] - start_signal_date).total_seconds())
         xi.append(sig_json[i]['time'])
     yi = []
     for i in range(len(sig_json)):
         yi.append(sig_json[i]['value'])
-    func = predict.MNK(xi_calc, yi, K)
-    f = [func.subs(x, a) for a in xi_calc]
-
-    x_predict = []
-    x_predict_calc = []
-    start_date = datetime.datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S')
-    x_predict.append(start_date)
-    x_predict_calc.append((start_date - start_signal_date).total_seconds())
-    period = time.strptime(period, '%H:%M:%S')
-    period = datetime.timedelta(hours=period.tm_hour, minutes=period.tm_min, seconds=period.tm_sec).total_seconds()
-    i = 1
-    while period > 0:
-        x_predict.append(x_predict[i - 1] + datetime.timedelta(seconds=10))
-        x_predict_calc.append(x_predict_calc[i - 1] + 10)
-        period = period - 10
-        i = i + 1
-    y_predict = [func.subs(x, a) for a in x_predict_calc]
-    for i in range(len(y_predict)):
-        if y_predict[i] > 110:
-            y_predict[i] = 110
-        if y_predict[i] < -30:
-            y_predict[i] = -30
+    y_predict = []
+    y_predict.append(yi[len(yi)-1])
+    for i in range(1, len(y_predict_v)):
+        if y_predict_v[i] > y_predict_v[i-1]:
+            y_predict.append(y_predict[i-1]-(y_predict_v[i]-y_predict_v[i-1])*4)
+        else:
+            y_predict.append(y_predict[i-1]+(y_predict_v[i-1]-y_predict_v[i])*4)
     data = {
-        'f_title': str(func),
         'x': xi,
         'y': str(yi),
-        'f': str(f),
-        'x_p': x_predict,
         'y_p': str(y_predict)
     }
     return json.dumps(data, default=datetime_handler)

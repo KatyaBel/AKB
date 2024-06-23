@@ -1,3 +1,7 @@
+const volt_color = '#4682B4'
+const temp_color = '#FF7F50'
+const inter_color = '#A52A2A'
+
 $(document).ready(function () {
     getObjects()
     let selObjs = document.getElementById('selectObjs');
@@ -134,15 +138,64 @@ function createTabs(devices, date) {
         divCar.setAttribute('data-bs-theme', 'dark')
 
         divCarIn.setAttribute('class', 'carousel-inner')
-
         let divCarItem = [document.createElement('div'), document.createElement('div')];
         let canvas = [document.createElement('canvas'), document.createElement('canvas')]
+        let legends = [document.createElement('div'), document.createElement('div')]
+        let legendDivItem = [document.createElement('div'), document.createElement('div'), document.createElement('div'), document.createElement('div')]
+        let legendPItem = [document.createElement('p'), document.createElement('p'), document.createElement('p'), document.createElement('p')]
 
         divCarItem[0].setAttribute('class', 'carousel-item active')
+        legends[0].setAttribute('class', 'row mx-auto')
+        legends[0].style.maxWidth = '405px'
+        legendDivItem[0].setAttribute('class', 'col')
+        legendDivItem[0].style.maxWidth = '30px'
+        legendDivItem[0].style.height = '15px'
+        legendDivItem[0].style.background = volt_color
+        legendPItem[0].setAttribute('class', 'col')
+        legendPItem[0].style.fontSize = '14px'
+        legendPItem[0].style.height = '15px'
+        legendPItem[0].innerHTML = 'Напряжение'
+        legendDivItem[1].setAttribute('class', 'col')
+        legendDivItem[1].style.maxWidth = '30px'
+        legendDivItem[1].style.height = '15px'
+        legendDivItem[1].style.background = inter_color
+        legendPItem[1].setAttribute('class', 'col')
+        legendPItem[1].style.fontSize = '14px'
+        legendPItem[1].style.height = '15px'
+        legendPItem[1].innerHTML = 'Нормальный диапазон'
+        legends[0].appendChild(legendDivItem[0])
+        legends[0].appendChild(legendPItem[0])
+        legends[0].appendChild(legendDivItem[1])
+        legends[0].appendChild(legendPItem[1])
         canvas[0].id = 'canvas'+(2*(i+1)-1)
+        divCarItem[0].appendChild(legends[0])
         divCarItem[0].appendChild(canvas[0])
+
         divCarItem[1].setAttribute('class', 'carousel-item')
+        legends[1].setAttribute('class', 'row mx-auto')
+        legends[1].style.maxWidth = '405px'
+        legendDivItem[2].setAttribute('class', 'col')
+        legendDivItem[2].style.maxWidth = '30px'
+        legendDivItem[2].style.height = '15px'
+        legendDivItem[2].style.background = temp_color
+        legendPItem[2].setAttribute('class', 'col')
+        legendPItem[2].style.fontSize = '14px'
+        legendPItem[2].style.height = '15px'
+        legendPItem[2].innerHTML = 'Температура'
+        legendDivItem[3].setAttribute('class', 'col')
+        legendDivItem[3].style.maxWidth = '30px'
+        legendDivItem[3].style.height = '15px'
+        legendDivItem[3].style.background = inter_color
+        legendPItem[3].setAttribute('class', 'col')
+        legendPItem[3].style.fontSize = '14px'
+        legendPItem[3].style.height = '15px'
+        legendPItem[3].innerHTML = 'Нормальный диапазон'
+        legends[1].appendChild(legendDivItem[2])
+        legends[1].appendChild(legendPItem[2])
+        legends[1].appendChild(legendDivItem[3])
+        legends[1].appendChild(legendPItem[3])
         canvas[1].id = 'canvas'+(2*(i+1))
+        divCarItem[1].appendChild(legends[1])
         divCarItem[1].appendChild(canvas[1])
 
         divCarIn.appendChild(divCarItem[0])
@@ -185,18 +238,11 @@ function createTabs(devices, date) {
                         let signals = JSON.parse(response);
                         for (let i = 0; i < signals.length; i++) {
                             let date = new Date(signals[i]['time']);
-                            let new_date = date.getDate()+'.'+date.getMonth()+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
+                            let new_date = date.getDate()+'.'+(date.getMonth()+1)+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
                             x1.push(new_date)
                             y1.push(signals[i]['value'])
                         }
-
-                        if (devices[i] === '1') {
-                            drawChart('Напряжение', x1, y1, 11, 14.5, canvas[0].id)
-                        } else {
-                            drawChart('Напряжение', x1, y1, params[0]['min_v'], params[0]['max_v'], canvas[0].id)
-                        }
-
-
+                        drawChart('Напряжение', x1, y1, params[0]['min_v'], params[0]['max_v'], canvas[0].id)
                     },
                     error: function (error) {
                         error = JSON.stringify(error);
@@ -212,7 +258,7 @@ function createTabs(devices, date) {
                         let signals = JSON.parse(response);
                         for (let i = 0; i < signals.length; i++) {
                             let date = new Date(signals[i]['time']);
-                            let new_date = date.getDate()+'.'+date.getMonth()+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
+                            let new_date = date.getDate()+'.'+(date.getMonth()+1)+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
                             x2.push(new_date)
                             y2.push(signals[i]['value'])
                         }
@@ -233,17 +279,23 @@ function createTabs(devices, date) {
 }
 
 function drawChart(title, x, y, min, max, chart_id) {
-    let cur_color;
+    let cur_color
     if ((chart_id.substring(6) % 2) === 1) {
-        cur_color = '#4682B4'
+        cur_color = volt_color
     } else {
-        cur_color = '#FF7F50'
+        cur_color = temp_color
     }
-    let y1 =[]
-    let y2 =[]
+    let y_max =[]
+    let y_min =[]
     for(let i = 0; i < y.length; i++) {
-        y1.push(max)
-        y2.push(min)
+        y_max.push(max)
+        y_min.push(min)
+    }
+    let y_step
+    if ((chart_id.substring(6) % 2) === 1) {
+        y_step = 0.5
+    } else {
+        y_step = 5
     }
     let chx = document.getElementById(chart_id).getContext("2d");
     let data =
@@ -256,28 +308,28 @@ function drawChart(title, x, y, min, max, chart_id) {
                     lineTension: 0,
                     fill: false,
                     borderColor: cur_color,
-                    borderWidth: 1,
+                    borderWidth: 0,
                     pointBackgroundColor: cur_color,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
+                    pointRadius: 0,
+                    pointHoverRadius: 0
                 },
                 {
                     label: 'Max',
-                    data: y1,
+                    data: y_max,
                     lineTension: 0,
                     fill: false,
-                    borderColor: '#DC143C',
-                    borderWidth: 2,
+                    borderColor: inter_color,
+                    borderWidth: 0,
                     pointRadius: 0,
                     pointHoverRadius: 0
                 },
                 {
                     label: 'Min',
-                    data: y2,
+                    data: y_min,
                     lineTension: 0,
                     fill: false,
-                    borderColor: '#DC143C',
-                    borderWidth: 2,
+                    borderColor: inter_color,
+                    borderWidth: 0,
                     pointRadius: 0,
                     pointHoverRadius: 0
                 }
@@ -286,13 +338,21 @@ function drawChart(title, x, y, min, max, chart_id) {
     let options =
         {
             legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                    boxWidth: 20,
-                    fontColor: 'black'
-                }
+                display: false
             },
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        stepSize: y_step
+                    }
+                }],
+                xAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        maxTicksLimit: 20
+                    }
+                }]
+            }
         };
     new Chart(chx, {
         type: 'line',

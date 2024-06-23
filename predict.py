@@ -1,11 +1,5 @@
-import math
-
-from sympy import symbols, cos, sin, exp
 import numpy
-
-
-from sympy import symbols, Eq, nsolve
-
+from sympy import symbols
 
 
 def gauss(arr, brr):
@@ -56,41 +50,4 @@ def MNK(xi, yi, K):
         for j in range(len(xi)): B[i] += yi[j] * xi[j] ** (K - i)
     X = []
     for j in gauss(A, B): X.append(float(j))
-    # составление уравнения
-    #f = 0
-    #for i in range(len(X)):
-        #f += X[i] * x ** (len(X) - 1 - i)
-    #return f
     return X
-
-
-
-def MNK_new(xi, yi):
-    x2 = 0
-    x = 0
-    n = len(xi)
-    r1 = 0
-    r2 = 0
-    for i in range(0, len(xi)):
-        x2 += xi[i]**2
-        x += xi[i]
-        r1 += xi[i]*yi[i]
-        r2 += yi[i]
-    # Определение переменных
-    a, b = symbols('a b')
-    # Определение системы уравнений
-    equations = [
-        Eq(x2 * a + x * b, r1),
-        Eq(x * a + n * b, r2),
-    ]
-    # Начальное предположение для численного решения
-    initial_guess = [0, 0]
-    # Нахождение численного решения
-    numerical_solution = nsolve(equations, (a, b), initial_guess)
-    # Вывод результатов
-    print("Численное решение:")
-    print('a =', numerical_solution[0])
-    print('b = ', numerical_solution[1])
-    x = symbols('x')
-    f = numerical_solution[0]*x+numerical_solution[1]
-    return f

@@ -1,0 +1,16 @@
+.carousel-inner {
+    width: 90%;
+    margin: auto;
+}
+.carousel button {
+    width: 30px;
+}
+.carousel-item .row {
+    width: 620px;
+}
+.carousel-item .row div {
+    max-width: 30px;
+}
+.carousel-item .row p {
+    font-size: 14px
+}
