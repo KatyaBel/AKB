@@ -153,10 +153,8 @@ function predict(num, period) {
                     }
                     let y_p = JSON.parse(data['y_p'])
                     drawPredict(x_p, y_p, params[0]['min_v'], params[0]['max_v'], 'calcCanvas1')
-                    /*
-                    let x_p_c = data['x_p_c'].toString().split('.')
                     $.ajax({
-                        url: '/get_predict_t/'+num+'/['+x_p_c+']/['+y_p+']',
+                        url: '/get_predict_t/'+num+'/['+y_p+']',
                         type: 'GET',
                         success: function (response) {
                             let data = JSON.parse(response);
@@ -165,16 +163,6 @@ function predict(num, period) {
                                 type: 'GET',
                                 success: function (response) {
                                     let params = JSON.parse(response);
-                                    let x_str = data['x']
-                                    let x = []
-                                    for (let i = 0; i < x_str.length; i++) {
-                                        let date = new Date(x_str[i]);
-                                        let new_date = date.getDate()+'.'+(date.getMonth()+1)+'.'+date.getFullYear()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds()
-                                        x.push(new_date)
-                                    }
-                                    let y = JSON.parse(data['y'])
-                                    let f = []
-                                    drawChart(title, x, y, f, params[0]['min_t'], params[0]['max_t'], 'canvas2')
                                     let y_p = JSON.parse(data['y_p'])
                                     drawPredict(x_p, y_p, params[0]['min_t'], params[0]['max_t'], 'calcCanvas2')
                                 },
@@ -189,7 +177,6 @@ function predict(num, period) {
                             alert('Ошибка: ' + error)
                         }
                     });
-                    */
                 },
                 error: function (error) {
                     error = JSON.stringify(error);

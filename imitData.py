@@ -44,6 +44,21 @@ last_v = {
     '12': -1
 }
 
+last_t = {
+    '1': -1,
+    '2': -1,
+    '3': -1,
+    '4': -1,
+    '5': -1,
+    '6': -1,
+    '7': -1,
+    '8': -1,
+    '9': -1,
+    '10': -1,
+    '11': -1,
+    '12': -1
+}
+
 Objects = Table\
     ('object', Base,
        Column('id', Integer, primary_key=True, autoincrement=True, nullable=False),
@@ -110,6 +125,7 @@ def start(cur_time):
                 for row2 in lim_json:
                     limit_min_v = row2['min_v']
                     limit_max_v = row2['max_v']
+                    limit_min_t = row2['min_t']
                     limit_max_t = row2['max_t']
                 signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Напряжение')
                 sig_json = [row._asdict() for row in signal_type_id]
@@ -146,31 +162,25 @@ def start(cur_time):
                             V[int(row1['connector_num']) - 1] = round(random.uniform(last_v[str(row1['id'])], last_v[str(row1['id'])]-0.03), 2)
                 last_v[str(row1['id'])] = V[int(row1['connector_num']) - 1]
 
-                #signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Температура')
-                #sig_json = [row._asdict() for row in signal_type_id]
-                #signal_type = sig_json[0]['id']
-                #values = session.query(Signals.c.value).filter(and_(Signals.c.device_id == row1['id'], Signals.c.signal_type_id == signal_type)).order_by(Signals.c.time.desc())
-                #val_json = [row._asdict() for row in values]
-                #if len(val_json) == 0:
-                    #T[int(row1['connector_num']) - 1] = limit_max_t
-                #else:
-                    #last2 = val_json[0]['value']
-                    #if (last1 <= limit_min_v):
-                       # if last1 > limit_min_abs_v:
-                           # T[int(row1['connector_num']) - 1] = round(random.uniform(last2-0.1*dist_t, last2+0.9*dist_t), 2)
-                        #else:
-                           # T[int(row1['connector_num']) - 1] = round(random.uniform(last2, last2 +0.9*dist_t), 2)
-                    #elif (last1 >= limit_max_v):
-                       # if last1 < limit_max_abs_v:
-                           # T[int(row1['connector_num']) - 1] = round(random.uniform(last2-0.9*dist_t, last2+0.1*dist_t), 2)
-                        #else:
-                           # T[int(row1['connector_num']) - 1] = round(random.uniform(last2-0.9*dist_t, last2), 2)
-                   # elif states[str(row1['id'])] == 'charge':
+                signal_type_id = session.query(Signal_types.c.id).where(Signal_types.c.title == 'Температура')
+                sig_json = [row._asdict() for row in signal_type_id]
+                signal_type = sig_json[0]['id']
+                values = session.query(Signals.c.value).filter(and_(Signals.c.device_id == row1['id'], Signals.c.signal_type_id == signal_type)).order_by(Signals.c.time.desc())
+                val_json = [row._asdict() for row in values]
+                if len(val_json) == 0:
+                    T[int(row1['connector_num']) - 1] = limit_min_t+(limit_max_t-limit_min_t)/2
+                else:
+                    if (last_t[str(row1['id'])] <= limit_min_t):
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(last_t[str(row1['id'])], last_t[str(row1['id'])]+1), 2)
+                    elif (last_t[str(row1['id'])] >= limit_max_t):
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(last_t[str(row1['id'])], last_t[str(row1['id'])]-1), 2)
+                    elif states[str(row1['id'])] == 'charge':
                         #заряд
-                        #T[int(row1['connector_num']) - 1] = round(random.uniform(last2-0.9*dist_t, last2+0.1*dist_t), 2)
-                    #else:
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(last_t[str(row1['id'])], last_t[str(row1['id'])]-0.5), 2)
+                    else:
                         #разряд
-                        #T[int(row1['connector_num']) - 1] = round(random.uniform(last2-0.1*dist_t, last2+0.9*dist_t), 2)
+                        T[int(row1['connector_num']) - 1] = round(random.uniform(last_t[str(row1['id'])], last_t[str(row1['id'])]+0.5), 2)
+                last_t[str(row1['id'])] = T[int(row1['connector_num']) - 1]
         moduleData = {
             'module_id': str(row['id']),
             'time': cur_time,
@@ -191,8 +201,8 @@ def start(cur_time):
         }
         data.append(moduleData)
     session.close()
-    print('\nПоказания:')
-    print(json.dumps(data, indent=4, sort_keys=True, default=str))
+    #print('\nПоказания:')
+    #print(json.dumps(data, indent=4, sort_keys=True, default=str))
     add_to_base(data)
     #threading.Timer(interval*60, start).start()
 
@@ -226,6 +236,6 @@ def add_to_base(data):
 
 if __name__ == '__main__':
     cur_time = datetime.datetime(2024, 6, 1, 0, 0, 0)
-    for i in range(1000):
+    for i in range(900):
         start(cur_time)
         cur_time += datetime.timedelta(minutes=interval)

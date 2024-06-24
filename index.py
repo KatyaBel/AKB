@@ -2,11 +2,6 @@ import ast
 import datetime
 import json
 import math
-import random
-
-import matplotlib.pyplot as plt
-
-import numpy as np
 from flask import Flask, render_template, request
 from sqlalchemy import Boolean, Enum, and_, Float, ForeignKey
 from sqlalchemy.orm import Session
@@ -361,8 +356,8 @@ def get_predict_v(device_id, period):
     return json.dumps(data, default=datetime_handler)
 
 
-@app.route('/get_predict_t/<device_id>/<x_predict_v>/<y_predict_v>', methods=['GET'])
-def get_predict_t(device_id, x_predict_v, y_predict_v):
+@app.route('/get_predict_t/<device_id>/<y_predict_v>', methods=['GET'])
+def get_predict_t(device_id, y_predict_v):
     y_predict_v = ast.literal_eval(y_predict_v)
     session = Session(bind=engine)
     signal_type_id = session.query(Signal_types).where(Signal_types.c.title == 'Температура')
@@ -372,23 +367,14 @@ def get_predict_t(device_id, x_predict_v, y_predict_v):
         where(and_(Signals.c.signal_type_id == signal_type, Signals.c.device_id == device_id)).order_by(Signals.c.time)
     session.close()
     sig_json = [row._asdict() for row in signals]
-    xi = []
-    for i in range(len(sig_json)):
-        xi.append(sig_json[i]['time'])
-    yi = []
-    for i in range(len(sig_json)):
-        yi.append(sig_json[i]['value'])
-    y_predict = []
-    y_predict.append(yi[len(yi)-1])
+    y_predict_t = [sig_json[len(sig_json)-1]['value']]
     for i in range(1, len(y_predict_v)):
-        if y_predict_v[i] > y_predict_v[i-1]:
-            y_predict.append(y_predict[i-1]-(y_predict_v[i]-y_predict_v[i-1])*4)
+        if y_predict_v[i-1] < y_predict_v[i]:
+            y_predict_t.append(float(y_predict_t[i-1])-(float(y_predict_v[i])-float(y_predict_v[i-1]))*4)
         else:
-            y_predict.append(y_predict[i-1]+(y_predict_v[i-1]-y_predict_v[i])*4)
+            y_predict_t.append(float(y_predict_t[i-1])+(float(y_predict_v[i-1])-float(y_predict_v[i]))*4)
     data = {
-        'x': xi,
-        'y': str(yi),
-        'y_p': str(y_predict)
+        'y_p': str(y_predict_t)
     }
     return json.dumps(data, default=datetime_handler)
 
